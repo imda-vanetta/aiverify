@@ -34,6 +34,8 @@ import SelectDatasetAndModelSection from './selectDatasetAndModel';
 import styles from './styles/inputs.module.css';
 import { CollapsibleList } from './collapsibleList';
 import { Stack } from '@mui/material';
+import { isApiconfigMapValid } from './utils/isApiconfigMapValid';
+import { BodyParam, UrlParam } from '../assets/modelAPIComponent/types';
 
 type Props = {
   projectStore: ProjectStore;
@@ -42,6 +44,9 @@ type Props = {
   onSelectGroundTruthBtnClick: () => void;
   setInvalidInputs: Dispatch<SetStateAction<boolean>>;
 };
+type RequestParams =
+  | Omit<BodyParam, 'reactPropId'>[]
+  | Omit<UrlParam, 'reactPropId'>[];
 
 type InputDisplay = InputBlock | InputBlock[] | string;
 
@@ -63,6 +68,55 @@ export default function UserInputComponent({
     {}
   );
   const { algorithms, inputBlocks } = projectStore.dependencies;
+  const isTestArgsCompleted = (() => {
+    for (let i = 0; i < algorithms.length; i++) {
+      if (!projectStore.isAlgorithmValid(algorithms[i].gid)) return false;
+    }
+    return true;
+  })();
+
+  useEffect(() => {
+    const selectedModel = projectStore.modelAndDatasets.model;
+    const apiConfigMap = projectStore.modelAndDatasets.apiConfig;
+    const isApiconfigMapCompleted = (() => {
+      let requestParams: RequestParams = [];
+      let paramsColumnsMap: Record<string, string> = {};
+      if (!selectedModel) return false;
+
+      if (
+        selectedModel &&
+        selectedModel.type === 'API' &&
+        selectedModel.modelAPI
+      ) {
+        if (selectedModel.modelAPI.parameters) {
+          if (selectedModel.modelAPI.parameters.paths) {
+            requestParams = [
+              ...selectedModel.modelAPI.parameters.paths.pathParams,
+            ];
+          } else if (selectedModel.modelAPI.parameters.queries) {
+            requestParams = [
+              ...selectedModel.modelAPI.parameters.queries.queryParams,
+            ];
+          }
+          if (apiConfigMap && apiConfigMap.parameters) {
+            paramsColumnsMap = apiConfigMap.parameters;
+          }
+        } else if (selectedModel.modelAPI.requestBody) {
+          requestParams = [...selectedModel.modelAPI.requestBody.properties];
+          if (apiConfigMap && apiConfigMap.requestBody) {
+            paramsColumnsMap = apiConfigMap.requestBody;
+          }
+        }
+        return isApiconfigMapValid(paramsColumnsMap, requestParams);
+      }
+
+      return true;
+    })();
+    setInvalidInputs(isTestArgsCompleted && isApiconfigMapCompleted);
+  }, [
+    projectStore.modelAndDatasets.apiConfig,
+    projectStore.modelAndDatasets.model,
+  ]);
 
   useEffect(() => {
     if (!projectStore.dependencies.inputBlocks) return;

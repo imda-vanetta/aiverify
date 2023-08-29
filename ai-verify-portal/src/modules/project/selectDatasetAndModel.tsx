@@ -20,6 +20,8 @@ import {
 import { useRouter } from 'next/router';
 import { IconButton } from 'src/components/iconButton';
 import { Tooltip, TooltipPosition } from 'src/components/tooltip';
+import { ColorPalette } from 'src/components/colorPalette';
+import { isApiconfigMapValid } from './utils/isApiconfigMapValid';
 
 type Props = {
   showGroundTruth: boolean;
@@ -28,6 +30,10 @@ type Props = {
   onSelectModel: () => void;
   projectStore: ProjectStore;
 };
+
+type RequestParams =
+  | Omit<BodyParam, 'reactPropId'>[]
+  | Omit<UrlParam, 'reactPropId'>[];
 
 export default function SelectDatasetAndModelSection({
   showGroundTruth,
@@ -45,7 +51,8 @@ export default function SelectDatasetAndModelSection({
   let groundTruthColumns: DatasetColumn[] = [];
   let groundTruthColVal = '';
   let paramsColumnsMap: Record<string, string> | undefined = undefined;
-  let requestParams: BodyParam[] | UrlParam[] = [];
+  let requestParams: RequestParams = [];
+  let isApiconfigParamsMapCompleted = false;
 
   const {
     model,
@@ -84,6 +91,15 @@ export default function SelectDatasetAndModelSection({
         paramsColumnsMap = apiConfig.requestBody;
       }
     }
+
+    if (!paramsColumnsMap) {
+      isApiconfigParamsMapCompleted = false;
+    } else {
+      isApiconfigParamsMapCompleted = isApiconfigMapValid(
+        paramsColumnsMap,
+        requestParams
+      );
+    }
   }
 
   function removeFileHandler(mode: FileSelectMode) {
@@ -92,6 +108,7 @@ export default function SelectDatasetAndModelSection({
       payload.testDataset = undefined;
     } else if (mode === FileSelectMode.MODEL) {
       payload.model = undefined;
+      payload.apiConfig = undefined;
     } else if (mode === FileSelectMode.GROUNDTRUTH) {
       payload.groundTruthDataset = undefined;
       payload.groundTruthColumn = undefined;
@@ -149,6 +166,8 @@ export default function SelectDatasetAndModelSection({
     }
     setShowParamsMapping(false);
   }
+
+  console.log(projectStore);
 
   return (
     <div className={styles.inputSection}>
@@ -346,13 +365,23 @@ export default function SelectDatasetAndModelSection({
                 </div>
               </div>
               {model && model.type === 'API' ? (
-                <div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginTop: 15,
+                  }}>
                   <button
-                    style={{ marginTop: 15 }}
-                    className="aivBase-button aivBase-button--outlined aivBase-button--small"
+                    className="aivBase-button aivBase-button--primary aivBase-button--small"
                     onClick={handleReqParamsBtnClick}>
                     Map API Request Parameters
                   </button>
+                  {!isApiconfigParamsMapCompleted ? (
+                    <div
+                      style={{ color: ColorPalette.alertRed, marginLeft: 10 }}>
+                      Mapping Incomplete
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>

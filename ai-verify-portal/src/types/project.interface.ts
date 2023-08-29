@@ -21,13 +21,13 @@ export interface Report {
   tests?: TestEngineTask[]; // tests that are run for this report
 }
 
-export type APIConfig = {
+export type APIConfigMap = {
   requestBody?: Record<string, string>;
   parameters?: Record<string, string>;
 };
 export interface ModelAndDatasets {
   model?: ModelFile;
-  apiConfig?: APIConfig;
+  apiConfig?: APIConfigMap;
   testDataset?: Dataset;
   groundTruthDataset?: Dataset;
   groundTruthColumn?: string;
